@@ -1,5 +1,5 @@
 import { useState, useEffect  } from 'react'
-import axios from 'axios'
+import personService from './services/persons'
 
 const App = () => {
 
@@ -13,16 +13,17 @@ const App = () => {
   const personsToShow = persons.filter(person => person.name.toLowerCase().includes(nameFilter))
 
 
-  const hook = () => {
-    axios
-      .get('http://localhost:3001/persons')
+  useEffect(() => {
+    personService
+      .getAll()
       .then(response => {
-        setPersons(response.data)
+        console.log(response)
+        setPersons(response)
       })
-  }
-  
-  useEffect(hook, [])
+  }, [])
 
+
+  
   const hanldeNameFilterChange = (event) => {
     setNameFilter(event.target.value)
   }
@@ -36,32 +37,75 @@ const App = () => {
   }
 
 
+  const deletePerson = (e) => {
+
+    console.log(e.target)
+    if(window.confirm((`Delete ${e.target.getAttribute("name")}?`)))
+    {
+
+    
+    personService
+      .deleteRecord(e.target.getAttribute("id"))
+      .then(response => {
+        personService
+          .getAll()
+          .then(response => {
+            setPersons(response)
+          })
+      })
+  }
+}
+
   const addPerson = (event) => {
     event.preventDefault()
-    const nameObject = {
+    const personObject = {
       name: newName,
-      number: newNumber
+      number: newNumber,
+      id: persons.length + 1
     }
 
     const personsContainsName = (personObject) => {
       let i;
       for (i = 0; i < persons.length; i++) {
         if (personObject.name === persons[i].name) {
-          return true;
+          return [true, persons[i]]
         }
       }
 
-      return false;
+      return [false, null]
     }
 
+    var [found, obj] = personsContainsName(personObject);
+    console.log(found, obj)
+    if (found) {
 
-    if (personsContainsName(nameObject)) {
-      alert(`${nameObject.name} is already added to phonebook`)
+      const changedPerson = { ...personObject, id: obj.id}
+      console.log(changedPerson)
+      if(window.confirm((`${changedPerson.name} is already added to phonebook, replace the old number with a new one?`)))
+      {
+        personService
+        .update(changedPerson.id, changedPerson)
+        .then(response => {
+          personService
+            .getAll()
+            .then(response => {
+              console.log(response)
+              setPersons(response)
+            })
+        })
+        }
+
       return
     }
 
-    setPersons(persons.concat(nameObject))
-    setNewName('')
+    personService
+    .create(personObject)
+    .then(response => {
+      setPersons(persons.concat(personObject))
+      setNewName('')
+      setNewNumber('')
+      })
+
   }
 
 
@@ -76,7 +120,7 @@ const App = () => {
                   handleNumberChange={handleNumberChange}></PersonForm>
       <h2>Numbers</h2>
 
-      <Persons personsToShow={personsToShow}></Persons>
+      <Persons personsToShow={personsToShow} deletePerson={deletePerson}></Persons>
     </div>
   )
 }
@@ -120,7 +164,7 @@ const Persons = (props) => {
   return (
     <>
       {props.personsToShow.map(p =>
-        <Person key={p.name} person={p}></Person>
+        <Person key={p.name} person={p} deletePerson={props.deletePerson} ></Person>
       )
       }
     </>
@@ -130,10 +174,20 @@ const Persons = (props) => {
 const Person = (props) => {
   return (
     <>
-        <p>{props.person.name} {props.person.number}</p>
+        <p>{props.person.name} {props.person.number} <Button handleClick={props.deletePerson} person={props.person} text="delete" /> </p>   
+
+        
       
     </>
   )
 }
+
+
+const Button = (props) => (
+  <button onClick={props.handleClick} id={props.person.id} name={props.person.name}>
+    {props.text}
+  </button>
+)
+
 
 export default App
