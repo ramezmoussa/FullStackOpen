@@ -102,7 +102,7 @@ const App = () => {
       return [false, null]
     }
 
-    var [found, obj] = personsContainsName(personObject);
+    let [found, obj] = personsContainsName(personObject);
     console.log(found, obj)
     if (found) {
 
