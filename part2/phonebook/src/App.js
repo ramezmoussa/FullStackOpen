@@ -1,5 +1,8 @@
 import { useState, useEffect  } from 'react'
 import personService from './services/persons'
+import './index.css'
+
+
 
 const App = () => {
 
@@ -10,7 +13,28 @@ const App = () => {
 
   const [nameFilter, setNameFilter] = useState('')
 
+  const [notificationMessage, setNotificationMessage] = useState(null)
+  const [errorMessage, setErrorMesssage] = useState(null)
+
   const personsToShow = persons.filter(person => person.name.toLowerCase().includes(nameFilter))
+
+
+  const displayNotification = (message) => {
+    setNotificationMessage(message)
+    setTimeout(() => {
+      setNotificationMessage(null)
+    }, 5000)
+
+  }
+
+  const displayError = (message) => {
+    setErrorMesssage(message)
+    setTimeout(() => {
+      setErrorMesssage(null)
+    }, 5000)
+
+  }
+
 
 
   useEffect(() => {
@@ -46,6 +70,9 @@ const App = () => {
     
     personService
       .deleteRecord(e.target.getAttribute("id"))
+      .catch(error => {
+        console.log('fail')
+      })
       .then(response => {
         personService
           .getAll()
@@ -80,17 +107,26 @@ const App = () => {
     if (found) {
 
       const changedPerson = { ...personObject, id: obj.id}
+      let failed = false
       console.log(changedPerson)
       if(window.confirm((`${changedPerson.name} is already added to phonebook, replace the old number with a new one?`)))
       {
         personService
         .update(changedPerson.id, changedPerson)
+        .catch(error => {
+          failed = true
+        })
         .then(response => {
           personService
             .getAll()
             .then(response => {
-              console.log(response)
               setPersons(response)
+              if(failed)
+                displayError(`Information of '${changedPerson.name}' has already been removed from the server`)
+              else
+                displayNotification(`Updated number of '${changedPerson.name}'`)
+
+
             })
         })
         }
@@ -104,6 +140,7 @@ const App = () => {
       setPersons(persons.concat(personObject))
       setNewName('')
       setNewNumber('')
+      displayNotification(`Added '${personObject.name}'`)
       })
 
   }
@@ -112,9 +149,12 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={notificationMessage}></Notification>
+      <Error message={errorMessage}></Error>
+
       <Filter hanldeNameFilterChange={hanldeNameFilterChange} nameFilter={nameFilter}></Filter>
       <br />
-
+      <h2>add a new</h2>
       <PersonForm addPerson={addPerson} newName={newName} 
                   handleNameChange={handleNameChange} newNumber={newNumber} 
                   handleNumberChange={handleNumberChange}></PersonForm>
@@ -191,3 +231,29 @@ const Button = (props) => (
 
 
 export default App
+
+
+const Notification = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+
+  return (
+    <div className='notification'>
+      {message}
+    </div>
+  )
+}
+
+
+const Error = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+
+  return (
+    <div className='error'>
+      {message}
+    </div>
+  )
+}
