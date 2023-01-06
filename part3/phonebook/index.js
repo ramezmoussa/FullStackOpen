@@ -4,7 +4,14 @@ app.use(express.json())
 
 const morgan = require('morgan')
 
-app.use(morgan('tiny'))
+// This was used for exercises 3.7
+// app.use(morgan('tiny'))
+
+
+morgan.token('res-body', (req, res) => {
+    return JSON.stringify(req.body);
+  });
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :res-body'  ))
 
 
 let persons = [
@@ -79,7 +86,7 @@ app.get('/api/info', (request, response) => {
 
 
   app.post('/api/persons', (request, response) => {
-    const person = request.body
+    const person = {...request.body}
     person.id = Math.floor((Math.random() *200))
 
     if(!('name' in person))
@@ -114,7 +121,7 @@ app.get('/api/info', (request, response) => {
 
 
     persons = persons.concat(person)
-    response.status(204).end()
+    response.status(200).end()
   })
 
 const PORT = 3001
