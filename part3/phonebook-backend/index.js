@@ -1,3 +1,5 @@
+const mongoose = require('mongoose')
+
 const express = require('express')
 const cors = require('cors')
 
@@ -9,7 +11,6 @@ const morgan = require('morgan')
 // This was used for exercises 3.7
 // app.use(morgan('tiny'))
 
-
 morgan.token('res-body', (req, res) => {
     return JSON.stringify(req.body);
   });
@@ -17,6 +18,19 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :r
 
 app.use(cors())
 app.use(express.static('build'))
+
+
+const url = `mongodb+srv://ramez:${password}@cluster0.vfhikws.mongodb.net/?retryWrites=true&w=majority`
+  
+mongoose.connect(url)
+
+const personSchema = new mongoose.Schema({
+  name: String,
+  number: String,
+})
+
+const Person = mongoose.model('Person', personSchema)
+
 
 let persons = [
     { 
