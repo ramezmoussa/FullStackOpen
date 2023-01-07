@@ -1,4 +1,4 @@
-import { useState, useEffect  } from 'react'
+import { useState, useEffect } from 'react'
 import personService from './services/persons'
 import './index.css'
 
@@ -47,7 +47,7 @@ const App = () => {
   }, [])
 
 
-  
+
   const hanldeNameFilterChange = (event) => {
     setNameFilter(event.target.value)
   }
@@ -65,29 +65,28 @@ const App = () => {
 
     console.log(persons)
     console.log(e.target)
-    if(window.confirm((`Delete ${e.target.getAttribute("name")}?`)))
-    {
+    if (window.confirm((`Delete ${e.target.getAttribute("name")}?`))) {
 
-    
-    let failed = false
-    personService
-      .deleteRecord(e.target.getAttribute("id"))
-      .catch(error => {
-        console.log('fail')
-        failed = true
-      })
-      .then(response => {
-        personService
-          .getAll()
-          .then(response => {
-            setPersons(response)
-            if(failed)
-              displayError(`Information of ID: '${e.target.getAttribute("id")}' has already been removed from the server`)
 
-          })
-      })
+      let failed = false
+      personService
+        .deleteRecord(e.target.getAttribute("id"))
+        .catch(error => {
+          console.log('fail')
+          failed = true
+        })
+        .then(response => {
+          personService
+            .getAll()
+            .then(response => {
+              setPersons(response)
+              if (failed)
+                displayError(`Information of ID: '${e.target.getAttribute("id")}' has already been removed from the server`)
+
+            })
+        })
+    }
   }
-}
 
   const addPerson = (event) => {
     event.preventDefault()
@@ -111,55 +110,54 @@ const App = () => {
     console.log(found, obj)
     if (found) {
 
-      const changedPerson = { ...personObject, id: obj.id}
+      const changedPerson = { ...personObject, id: obj.id }
       let failed = false
       console.log(changedPerson)
-      if(window.confirm((`${changedPerson.name} is already added to phonebook, replace the old number with a new one?`)))
-      {
+      if (window.confirm((`${changedPerson.name} is already added to phonebook, replace the old number with a new one?`))) {
         personService
-        .update(changedPerson.id, changedPerson)
-        .catch(error => {
-          console.log(error)
-          failed = true
-        })
-        .then(response => {
-          personService
-            .getAll()
-            .then(response => {
-              setPersons(response)
-              if(failed)
-                displayError(`Information of '${changedPerson.name}' has already been removed from the server`)
-              else
-                displayNotification(`Updated number of '${changedPerson.name}'`)
-            })
-        })
-        }
+          .update(changedPerson.id, changedPerson)
+          .catch(error => {
+            console.log(error)
+            failed = true
+          })
+          .then(response => {
+            personService
+              .getAll()
+              .then(response => {
+                setPersons(response)
+                if (failed)
+                  displayError(`Information of '${changedPerson.name}' has already been removed from the server`)
+                else
+                  displayNotification(`Updated number of '${changedPerson.name}'`)
+              })
+          })
+      }
 
       return
     }
 
-        personService
-    .create(personObject)
-    .then( () => {
-    personService.getAll()
-    .then(response => {
-      console.log(response)
-      setPersons(response)
-      setNewName('')
-      setNewNumber('')
-      displayNotification(`Added '${personObject.name}'`)
+    personService
+      .create(personObject)
+      .then(() => {
+        personService.getAll()
+          .then(response => {
+            console.log(response)
+            setPersons(response)
+            setNewName('')
+            setNewNumber('')
+            displayNotification(`Added '${personObject.name}'`)
+          })
       })
-    })
-    .catch(error => {
-      console.log(error)
-      personService.getAll()
-      .then(response => {
-        setPersons(response)
-        setNewName('')
-        setNewNumber('')
-        displayError(error.request.responseText)
-     })
-    })
+      .catch(error => {
+        console.log(error)
+        personService.getAll()
+          .then(response => {
+            setPersons(response)
+            setNewName('')
+            setNewNumber('')
+            displayError(error.request.responseText)
+          })
+      })
 
   }
 
@@ -173,9 +171,9 @@ const App = () => {
       <Filter hanldeNameFilterChange={hanldeNameFilterChange} nameFilter={nameFilter}></Filter>
       <br />
       <h2>add a new</h2>
-      <PersonForm addPerson={addPerson} newName={newName} 
-                  handleNameChange={handleNameChange} newNumber={newNumber} 
-                  handleNumberChange={handleNumberChange}></PersonForm>
+      <PersonForm addPerson={addPerson} newName={newName}
+        handleNameChange={handleNameChange} newNumber={newNumber}
+        handleNumberChange={handleNumberChange}></PersonForm>
       <h2>Numbers</h2>
 
       <Persons personsToShow={personsToShow} deletePerson={deletePerson}></Persons>
@@ -232,10 +230,10 @@ const Persons = (props) => {
 const Person = (props) => {
   return (
     <>
-        <p>{props.person.name} {props.person.number} <Button handleClick={props.deletePerson} person={props.person} text="delete" /> </p>   
+      <p>{props.person.name} {props.person.number} <Button handleClick={props.deletePerson} person={props.person} text="delete" /> </p>
 
-        
-      
+
+
     </>
   )
 }
