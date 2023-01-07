@@ -158,7 +158,7 @@ const App = () => {
             setPersons(response)
             setNewName('')
             setNewNumber('')
-            displayError(error.request.data.error)
+            displayError(error.response.data)
           })
       })
 
