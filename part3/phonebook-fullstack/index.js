@@ -22,9 +22,6 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :r
 app.use(cors())
 app.use(express.static('build'))
 
-
-const process = require('node:process')
-
 const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
