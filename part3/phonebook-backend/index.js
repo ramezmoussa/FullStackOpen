@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-
+const Person = require('./models/person')
 const express = require('express')
 const cors = require('cors')
 
@@ -20,43 +20,40 @@ app.use(cors())
 app.use(express.static('build'))
 
 
-const url = `mongodb+srv://ramez:${password}@cluster0.vfhikws.mongodb.net/?retryWrites=true&w=majority`
-  
-mongoose.connect(url)
 
-const personSchema = new mongoose.Schema({
-  name: String,
-  number: String,
-})
+const errorHandler = (error, request, response, next) => {
 
-const Person = mongoose.model('Person', personSchema)
+  if (error.name === 'CastError') {
+    response.status(400).send(error.message)
+  } 
 
+  else if( error.name === "IdDoesNotExist")
+  {
+    response.status(404).send(error.message)
+  }
 
-let persons = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
+  else if( error.name === "nameNotPresent")
+  {
+    response.status(409).send(error.message)
+
+  }
+
+  else if( error.name === "numberNotPresent")
+  {
+    response.status(409).send(error.message)
+  }
+}
 
 app.get('/api/persons', (request, response) => {
-  response.json(persons)
+
+  Person.find({}).then(result => {
+      res = []
+      result.forEach(person => {
+        res = res.concat(person)
+      })
+      return response.json(res)
+    })
+    .catch((err) => console.log("err"))
 })
 
 app.get('/api/info', (request, response) => {
@@ -64,85 +61,144 @@ app.get('/api/info', (request, response) => {
     const dateString = currentDate.toString();
 
     response.set('Content-Type', 'text/html');
-    response.send(Buffer.from(
-        `<p>Phonebook has info for ${persons.length} people</p>
+
+    Person.find({}).then(result => {
+      res = []
+      result.forEach(person => {
+        res = res.concat(person)
+      })
+      response.send(Buffer.from(
+        `<p>Phonebook has info for ${res.length} people</p>
         <p>${dateString} </p>
         `
-        ));
+        ))
+    })
+    .catch((err) => console.log("err"))
+
+
     
   })
 
-  app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-    if(person)
-        response.json(person)
-    else
-    {
-        response.status(404).send({ error: `No person exists with id: ${id}`})
+  app.get('/api/persons/:id', async (request, response, next) => {
+    
 
-    }
-  })
+    try{
+      const id = mongoose.Types.ObjectId(request.params.id)
 
+      await Person.findOne({ _id: id }).exec()
+      .then((result, err) => {
 
-  app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-
-    const removeIndex = persons.findIndex( person => person.id === id );
-    if(removeIndex !== -1)
-    {
-        persons.splice( removeIndex, 1 );
-        response.status(204).end()
-
-    }
-    else
-    {
-        response.status(404).send({ error: `No person exists with id: ${id}`})
-
-    }
-  })
-
-
-  app.post('/api/persons', (request, response) => {
-    const person = {...request.body}
-    person.id = Math.floor((Math.random() *200))
-
-    if(!('name' in person))
-    {
-        response.status(422).send({ error: `The name field is not present in the data provided`})
-        return
-    }
-
-    if(!('number' in person))
-    {
-        response.status(422).send({ error: `The number field is not present in the data provided`})
-        return
-    }
-
-
-    const personsContainsName = (personObject) => {
-        let i;
-        for (i = 0; i < persons.length; i++) {
-          if (personObject.name === persons[i].name) {
-            return [true, persons[i]]
-          }
+        if(!result)
+        {
+            throw Error
         }
-  
-        return [false, null]
-      }
-  
-      let [found, obj] = personsContainsName(person);
-      if (found) {
-        response.status(422).send({ error: `A person with the same name already exist in the phonebook`})
-        return
-      }
+        response.json(result)
+        return response.status(204).end()
+    
+      })
+    }
+    catch(error)
+    {
+      const err = new Error()
+      err.name= "IdDoesNotExist" 
+      err.message = `No person exists with id: ${request.params.id}`
+      console.log(err.name)
+      next(err, request, response)
+      return
+    }
+
+  })
 
 
-    persons = persons.concat(person)
-    response.status(200).end()
+  app.put('/api/persons/:id', async (request, response, next) => {
+    const id = mongoose.Types.ObjectId(request.params.id)
+    const updates = {
+        "name": request.body.name,
+        'number': request.body.number
+      }
+
+    console.log(id, updates)
+
+    try{
+      await Person.findOneAndUpdate({ _id: id }, updates, { returnDocument: 'before' }).exec()
+      .then((result, err) => {
+
+        if(!result)
+        {
+          const error = new Error()
+          error.name="IdDoesNotExist"
+          error.message = `No person exists with id: ${id}`
+          throw error
+        }
+
+      })
+    }
+    catch(error)
+    {
+      next(error, request, response)
+      return
+    }
+    return response.status(204).end()
+
+  })
+
+  app.delete('/api/persons/:id', (request, response, next) => {
+    const id = request.params.id
+
+    Person.findByIdAndDelete(mongoose.Types.ObjectId(id))
+      .catch(error => next(error))
+    
+    return response.status(204).end()
+
+  })
+
+
+  app.post('/api/persons', (request, response, next) => {
+    const person = {...request.body}
+
+    try {
+      if(person.name.length=== 0)
+      {
+          const error = new Error()
+          error.name="nameNotPresent"
+          error.message = `The name field must be filled`
+          throw error 
+      }
+  
+      if(person.number.length === 0)
+      {
+          const error = new Error()
+          error.name="numberNotPresent"
+          error.message = `The number field must be filled`
+          throw error 
+      }
+
+      const p = new Person({
+        name: person.name,
+        number: person.number
+      })
+    
+      let saving = p.save()
+      response.json(saving)
+
+
+    }
+    catch(err)
+    {
+      next(err)
+    }
+
+
+  return response.status(200).end()
+
+
   })
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+
+
+
+app.use(errorHandler)

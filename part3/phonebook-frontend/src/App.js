@@ -63,21 +63,27 @@ const App = () => {
 
   const deletePerson = (e) => {
 
+    console.log(persons)
     console.log(e.target)
     if(window.confirm((`Delete ${e.target.getAttribute("name")}?`)))
     {
 
     
+    let failed = false
     personService
       .deleteRecord(e.target.getAttribute("id"))
       .catch(error => {
         console.log('fail')
+        failed = true
       })
       .then(response => {
         personService
           .getAll()
           .then(response => {
             setPersons(response)
+            if(failed)
+              displayError(`Information of ID: '${e.target.getAttribute("id")}' has already been removed from the server`)
+
           })
       })
   }
@@ -88,7 +94,6 @@ const App = () => {
     const personObject = {
       name: newName,
       number: newNumber,
-      id: persons.length + 1
     }
 
     const personsContainsName = (personObject) => {
@@ -114,6 +119,7 @@ const App = () => {
         personService
         .update(changedPerson.id, changedPerson)
         .catch(error => {
+          console.log(error)
           failed = true
         })
         .then(response => {
@@ -125,8 +131,6 @@ const App = () => {
                 displayError(`Information of '${changedPerson.name}' has already been removed from the server`)
               else
                 displayNotification(`Updated number of '${changedPerson.name}'`)
-
-
             })
         })
         }
@@ -134,14 +138,28 @@ const App = () => {
       return
     }
 
-    personService
+        personService
     .create(personObject)
+    .then( () => {
+    personService.getAll()
     .then(response => {
-      setPersons(persons.concat(personObject))
+      console.log(response)
+      setPersons(response)
       setNewName('')
       setNewNumber('')
       displayNotification(`Added '${personObject.name}'`)
       })
+    })
+    .catch(error => {
+      console.log(error)
+      personService.getAll()
+      .then(response => {
+        setPersons(response)
+        setNewName('')
+        setNewNumber('')
+        displayError(error.request.responseText)
+     })
+    })
 
   }
 
