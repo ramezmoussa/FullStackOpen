@@ -29,19 +29,28 @@ const errorHandler = (error, request, response, next) => {
 
     if (error.name === 'CastError') {
         response.status(400).send(error.message)
+        return
     }
 
     else if (error.name === 'IdDoesNotExist') {
         response.status(404).send(error.message)
+        return
     }
 
     else if (error.name === 'nameNotPresent') {
         response.status(409).send(error.message)
+        return
 
     }
 
     else if (error.name === 'numberNotPresent') {
         response.status(409).send(error.message)
+        return
+    }
+    else if(error.name === 'ValidationError')
+    {
+        response.status(400).send(error.message)
+        return
     }
     next(error)
 }
@@ -120,17 +129,15 @@ app.put('/api/persons/:id', async (request, response, next) => {
     console.log(id, updates)
 
     try {
-        await Person.findOneAndUpdate({ _id: id }, updates, { returnDocument: 'before' }).exec()
-            .then((result) => {
+        const result = await Person.findOneAndUpdate({ _id: id }, updates, { returnDocument: 'before', runValidators: true })
 
-                if (!result) {
-                    const error = new Error()
-                    error.name = 'IdDoesNotExist'
-                    error.message = `No person exists with id: ${id}`
-                    throw error
-                }
-
-            })
+        console.log('here', result)
+        if (!result) {
+            const error = new Error()
+            error.name = 'IdDoesNotExist'
+            error.message = `No person exists with id: ${id}`
+            throw error
+        }
     }
     catch (error) {
         next(error, request, response)
@@ -151,7 +158,7 @@ app.delete('/api/persons/:id', (request, response, next) => {
 })
 
 
-app.post('/api/persons', (request, response, next) => {
+app.post('/api/persons', async (request, response, next) => {
     const person = { ...request.body }
 
     try {
@@ -169,14 +176,16 @@ app.post('/api/persons', (request, response, next) => {
             throw error
         }
 
+
         const p = new Person({
             name: person.name,
             number: person.number
         })
 
-        let saving = p.save()
-        response.json(saving)
+        let saving = await p.save()
 
+        response.json(saving)
+    
 
     }
     catch (err) {

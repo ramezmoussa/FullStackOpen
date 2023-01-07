@@ -106,17 +106,20 @@ const App = () => {
       return [false, null]
     }
 
+    
     let [found, obj] = personsContainsName(personObject);
     console.log(found, obj)
     if (found) {
 
       const changedPerson = { ...personObject, id: obj.id }
       let failed = false
+      let err_msg = ''
       console.log(changedPerson)
       if (window.confirm((`${changedPerson.name} is already added to phonebook, replace the old number with a new one?`))) {
         personService
           .update(changedPerson.id, changedPerson)
           .catch(error => {
+            err_msg = error.response.data
             console.log(error)
             failed = true
           })
@@ -126,7 +129,7 @@ const App = () => {
               .then(response => {
                 setPersons(response)
                 if (failed)
-                  displayError(`Information of '${changedPerson.name}' has already been removed from the server`)
+                  displayError(`${err_msg}`)
                 else
                   displayNotification(`Updated number of '${changedPerson.name}'`)
               })
@@ -155,7 +158,7 @@ const App = () => {
             setPersons(response)
             setNewName('')
             setNewNumber('')
-            displayError(error.request.responseText)
+            displayError(error.request.data.error)
           })
       })
 
