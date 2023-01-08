@@ -1,8 +1,24 @@
 const mongoose = require('mongoose')
 const supertest = require('supertest')
+const config = require('../utils/config')
+
 const app = require('../app')
 const api = supertest(app)
 const Blog = require('../models/blog')
+const User = require('../models/user')
+
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+
+
+const initialUsers = [
+    {
+        username: 'ramez',
+        name: 'ramez',
+        password: 'plain',
+
+    }
+]
 
 const initialNotes = [
     {
@@ -58,16 +74,30 @@ const initialNotes = [
 beforeEach(async () => {
     await Blog.deleteMany({})
   
+    await User.deleteMany({})
+
     const blogObjects = initialNotes
         .map(blog => new Blog(blog))
-    const promiseArray = blogObjects.map(blog => blog.save())
-    await Promise.all(promiseArray)
+    const promiseArrayBlogs = blogObjects.map(blog => blog.save())
+    await Promise.all(promiseArrayBlogs)
+
+    const userObjects = initialUsers
+        .map(user => {
+            const saltRounds = 10
+            user.password = bcrypt.hash(`${user.password}`, saltRounds)
+    
+            return new User(user)
+        })
+    const promiseArrayUsers = userObjects.map(user => user.save())
+    await Promise.all(promiseArrayUsers)
+
 })
 
 
 test('execise 4.8: blogs are returned as json with correct length', async () => {
     const response = await api.get('/api/blogs')
     expect(response.header['content-type']).toEqual('application/json; charset=utf-8')
+    expect(response.status).toEqual(200)
     expect(response.body.length).toEqual(6)
 })
 
@@ -78,17 +108,24 @@ test('execise 4.9: blogs have unique identity: id', () => {
 })
 
 test('execise 4.10: verify that POST creates a new blog', async () => {
-
+    let usersResponse = await api.get('/api/users')
+    
     let newBlog =     {
         title: 'test title',
         author: 'Ramez',
         url: 'http://somewhere.html',
         likes: 2,
+        user: usersResponse.body[0].id
     } 
 
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    )
+    
     let response = await api.get('/api/blogs')
     let numberOfBlogs = response.body.length
-    response = await api.post('/api/blogs').send(newBlog)
+    response = await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
     expect(response.status).toEqual(201)
 
     response = await api.get('/api/blogs')
@@ -98,13 +135,22 @@ test('execise 4.10: verify that POST creates a new blog', async () => {
 
 test('execise 4.11: verify that POST creates a new blog with default likes equals 0 if not present', async () => {
 
-    let newBlog = {
-        title: 'test_post',
+    let usersResponse = await api.get('/api/users')
+    
+    let newBlog =     {
+        title: 'test title',
         author: 'Ramez',
-        url: 'http://somewhere.html'
-    }
+        url: 'http://somewhere.html',
+        user: usersResponse.body[0].id
+    } 
 
-    let response =  await api.post('/api/blogs').send(newBlog)
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    )
+
+
+    let response =  await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
     expect(response.status).toEqual(201)
 
     response =  await api.get(`/api/blogs/${JSON.parse(response.text).id}`)
@@ -116,75 +162,115 @@ test('execise 4.11: verify that POST creates a new blog with default likes equal
 
 test('execise 4.12: verify that POST returns code 400 if title is missing', async () => {
 
-    let newBlog = {
+    let usersResponse = await api.get('/api/users')
+    
+    let newBlog =     {
         author: 'Ramez',
-        url: 'http://somewhere.html'
-    }
+        url: 'http://somewhere.html',
+        user: usersResponse.body[0].id
+    } 
 
-    let response =  await api.post('/api/blogs').send(newBlog)
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    )
+
+
+    let response =  await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
     expect(response.status).toEqual(400)
 })
 
 test('execise 4.12: verify that POST returns code 400 if url is missing', async () => {
 
-    let newBlog = {
+    let usersResponse = await api.get('/api/users')
+    
+    let newBlog =     {
         author: 'Ramez',
-        title: 'test title'
-    }
+        title: 'test title',
+        user: usersResponse.body[0].id
+    } 
 
-    let response =  await api.post('/api/blogs').send(newBlog)
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    )
+
+
+    let response =  await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
     expect(response.status).toEqual(400)
 })
 
 
 test('execise 4.13: verify that deleting returns code 204 when successful', async () => {
 
+    let usersResponse = await api.get('/api/users')
+    
     let newBlog =     {
         title: 'test title',
         author: 'Ramez',
         url: 'http://somewhere.html',
-        likes: 2,
+        user: usersResponse.body[0].id
     } 
 
-    let postResponse = await api.post('/api/blogs').send(newBlog)
-    expect( postResponse.status).toEqual(201)
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    )
 
-    let response =  await api.delete(`/api/blogs/${JSON.parse(postResponse.text).id}`)
+
+    let postResponse =  await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
+    expect(postResponse.status).toEqual(201)
+
+    let response =  await api.delete(`/api/blogs/${JSON.parse(postResponse.text).id}`).set('Authorization', `Bearer ${token}`)
     expect(response.status).toEqual(204)
 })
 
 test('execise 4.13: verify that deleting returns code 404 when id doesnot exist', async () => {
 
+    let usersResponse = await api.get('/api/users')
+    
     let newBlog =     {
         title: 'test title',
         author: 'Ramez',
         url: 'http://somewhere.html',
-        likes: 2,
+        user: usersResponse.body[0].id
     } 
 
-    let postResponse = await api.post('/api/blogs').send(newBlog)
-    expect( postResponse.status).toEqual(201)
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    ) 
 
-    let response =  await api.delete(`/api/blogs/${JSON.parse(postResponse.text).id}`)
+    let postResponse =  await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
+    expect(postResponse.status).toEqual(201)
+
+    let response =  await api.delete(`/api/blogs/${JSON.parse(postResponse.text).id}`).set('Authorization', `Bearer ${token}`)
     expect(response.status).toEqual(204)
 
-    response =  await api.delete(`/api/blogs/${JSON.parse(postResponse.text).id}`)
+    response =  await api.delete(`/api/blogs/${JSON.parse(postResponse.text).id}`).set('Authorization', `Bearer ${token}`)
     expect(response.status).toEqual(404)
 
 
 })
 
 
-test('execise 4.14: verify that POST creates a new blog', async () => {
+test('execise 4.14: verify that PUT updates the blog', async () => {
 
-    let newBlog = {
-        title: 'test_post',
+    let usersResponse = await api.get('/api/users')
+    
+    let newBlog =     {
+        title: 'test title',
         author: 'Ramez',
         url: 'http://somewhere.html',
-        likes: 25
-    }
+        user: usersResponse.body[0].id
+    } 
 
-    let postResponse =  await api.post('/api/blogs').send(newBlog)
+    const token = jwt.sign(
+        {id: usersResponse.body[0].id}, 
+        config.SECRET
+    )
+
+    let postResponse =  await api.post('/api/blogs').set('Authorization', `Bearer ${token}`).send(newBlog)
     expect(postResponse.status).toEqual(201)
 
     let response = await api.put(`/api/blogs/${JSON.parse(postResponse.text).id}`).send({likes: 5})
@@ -194,6 +280,38 @@ test('execise 4.14: verify that POST creates a new blog', async () => {
     expect(response.status).toEqual(200)
     expect(JSON.parse(response.text).likes).toEqual(5)
 
+})
+
+
+test('execise 4.16: verify that invalid users are not created', async () => {
+
+    let invalidUsers = [{
+        username: 'ra',
+        name: 'ramez',
+        password: 'plain',
+    },
+    {
+        username: 'ramez',
+        name: 'ramez',
+        password: 'pl',
+
+    },
+    {
+        username: 'ramez',
+        name: 'ramez',
+    },
+    {
+        name: 'ramez',
+        password: 'plain'
+    },
+    ]
+
+    let i
+    for(i=0;i<invalidUsers.length;i++)
+    {
+        let response =  await api.post('/api/users').send(invalidUsers[i])
+        expect(response.status).toEqual(400)    
+    }
 })
 
 

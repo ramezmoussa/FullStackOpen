@@ -1,4 +1,7 @@
 const logger = require('./logger')
+const jwt = require('jsonwebtoken')
+const config = require('./config')
+
 
 const requestLogger = (request, response, next) => {
     logger.info('Method:', request.method)
@@ -7,6 +10,38 @@ const requestLogger = (request, response, next) => {
     logger.info('---')
     next()
 }
+
+const tokenExtractor = (request, response, next) => {
+    const authorization = request.get('authorization')
+    if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+        response.token = authorization.substring(7)
+    }
+    else
+    {
+        response.token=null
+    }
+    next()
+}
+  
+const userExtractor = (request, response, next) => {
+    const token = response.token
+    if(token === null)
+    {
+        response.user=null
+    }
+    else {
+        const decodedToken = jwt.verify(token, config.SECRET)
+        if (!decodedToken.id) {
+            response.user=null
+        }
+        else
+        {
+            response.user=decodedToken.id
+        }
+    }
+    next()
+}
+  
 
 const unknownEndpoint = (request, response) => {
     response.status(404).send({ error: 'unknown endpoint' })
@@ -21,7 +56,12 @@ const errorHandler = (error, request, response, next) => {
         return response.status(400).json({ error: error.message })
     } else if (error.name === 'IdDoesNotExist') {
         return response.status(404).json({ error: error.message })
+    } else if (error.name === 'JsonWebTokenError') {
+        return response.status(401).json({
+            error: 'invalid token'
+        })
     }
+    
 
     next(error)
 }
@@ -29,5 +69,7 @@ const errorHandler = (error, request, response, next) => {
 module.exports = {
     requestLogger,
     unknownEndpoint,
-    errorHandler
+    errorHandler,
+    tokenExtractor,
+    userExtractor
 }

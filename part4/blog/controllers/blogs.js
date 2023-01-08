@@ -1,22 +1,33 @@
 
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
+const User = require('../models/user')
+
 const mongoose = require('mongoose')
 require('express-async-errors')
 
 
-
 blogsRouter.get('/', async (request, response) => {
-    Blog
-        .find({})
-        .then(blogs => {
-            response.json(blogs)
-        })
+    const notes = await Blog
+        .find({}).populate('user', { username: 1, name: 1 })
+  
+    response.json(notes)
 })
 
 blogsRouter.post('/', async (request, response) => {
+    
+    const userID = response.user
+    if (!userID) {
+        return response.status(401).json({ error: 'token missing or invalid' })
+    }
+  
+    const user = await User.findById(userID)
+  
     const blog = new Blog(request.body)
     const savedBlog = await blog.save()
+    user.blogs = user.blogs.concat(savedBlog._id)
+    await user.save()
+  
     response.status(201).json(savedBlog)
 
 })
@@ -24,16 +35,20 @@ blogsRouter.post('/', async (request, response) => {
 blogsRouter.delete('/:id', async (request, response) => {
     const id = mongoose.Types.ObjectId(request.params.id)
 
-    const result = await Blog.findByIdAndRemove(id)
-
-    if (!result) {
+    const blog = await Blog.findById(id)
+    if (!blog) {
         const error = new Error()
         error.name = 'IdDoesNotExist'
-        error.message = `No person exists with id: ${id}`
+        error.message = `No Blog exists with id: ${id}`
         throw error
+    }
+    const userID = response.user
+    if (!userID || userID !== blog.user.toString()) {
+        return response.status(401).json({ error: 'token missing or invalid' })
     }
 
 
+    await Blog.findByIdAndRemove(id)
     response.status(204).end()
 })
   
