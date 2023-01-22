@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import blogService from '../services/blogs'
 
-const Blog = ({ blog, setBlogs, user }) => {
+const Blog = ({ blog, setBlogs, user, addLikeHandler }) => {
 
-  console.log(blog)
   const blogStyle = {
     paddingTop: 10,
     paddingLeft: 2,
@@ -25,22 +24,7 @@ const Blog = ({ blog, setBlogs, user }) => {
 
   const addLike = async () => {
     const newBlog = { ...blog }
-    newBlog.likes = newBlog.likes + 1
-    newBlog.user = newBlog.user.id
-    try {
-      await blogService.update(newBlog)
-      blogService.getAll()
-        .then(blogs =>
-        {
-          blogs.sort((a, b) => (b.likes - a.likes))
-          setBlogs( blogs )
-
-        })
-
-    }
-    catch (exception) {
-      console.log(exception)
-    }
+    addLikeHandler(newBlog)
   }
 
 

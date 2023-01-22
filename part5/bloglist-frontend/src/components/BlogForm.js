@@ -40,15 +40,16 @@ const BlogForm = (props) => {
         <div>
             title: <input
             value={title}
-            onChange={handleTitleChange} />
+            onChange={handleTitleChange}
+            placeholder='write title here' />
           <br />
             author: <input
             value={author}
-            onChange={handleAuthorChange} />
+            onChange={handleAuthorChange} placeholder='write author here' />
           <br />
             url: <input
             value={url}
-            onChange={handleUrlChange} />
+            onChange={handleUrlChange} placeholder='write url here' />
           <br />
         </div>
         <div>
