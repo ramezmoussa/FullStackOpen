@@ -63,7 +63,7 @@ const Blog = ({ blog, setBlogs, user, addLikeHandler }) => {
   }
 
   return (
-    <div style={blogStyle}>
+    <div className="blog-box" style={blogStyle}>
       {blog.title}       <Button handleClick={toggleView} text={viewFullDetails} />
 
       <br/>

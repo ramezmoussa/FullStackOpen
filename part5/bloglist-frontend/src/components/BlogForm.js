@@ -39,15 +39,18 @@ const BlogForm = (props) => {
       <form onSubmit={addBlog}>
         <div>
             title: <input
+            id='title-id'
             value={title}
             onChange={handleTitleChange}
             placeholder='write title here' />
           <br />
             author: <input
+            id='author-id'
             value={author}
             onChange={handleAuthorChange} placeholder='write author here' />
           <br />
             url: <input
+            id='url-id'
             value={url}
             onChange={handleUrlChange} placeholder='write url here' />
           <br />
