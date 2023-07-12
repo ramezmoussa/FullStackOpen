@@ -8,7 +8,8 @@ export const AnecdoteForm = () => {
         event.preventDefault()
         const content = event.target.anecdote.value
         event.target.anecdote.value = ''
-        dispatch(newAnecdote(createAnecdote(content)));
+        
+        dispatch(createAnecdote(content));
       }
 
     return (
