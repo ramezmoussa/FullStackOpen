@@ -1,5 +1,6 @@
 import ReactDOM from 'react-dom/client'
 import { useState } from 'react'
+import  { useField } from './hooks'
 
 import {
   BrowserRouter as Router,
@@ -78,23 +79,32 @@ const Footer = () => (
 )
 
 const CreateNew = (props) => {
-  const [content, setContent] = useState('')
-  const [author, setAuthor] = useState('')
-  const [info, setInfo] = useState('')
+  const content = useField('')
+  const author = useField('')
+  const info = useField('')
 
   const navigate = useNavigate();
 
+  const reset = () => {
+    content.reset()
+    author.reset()
+    info.reset()
+  }
   const handleSubmit = (e) => {
+
     e.preventDefault()
     props.addNew({
-      content,
-      author,
-      info,
+      content: content.value,
+      author: author.value,
+      info: info.value,
       votes: 0
     })
     navigate('/', {replace: true});
 
   }
+
+  // in the inputs, use spread syntax but ignore reset. Show that below:
+  // <input {...content} reset={undefined} />
 
   return (
     <div>
@@ -102,18 +112,21 @@ const CreateNew = (props) => {
       <form onSubmit={handleSubmit}>
         <div>
           content
-          <input name='content' value={content} onChange={(e) => setContent(e.target.value)} />
+          <input {...content} reset={undefined} />
         </div>
         <div>
           author
-          <input name='author' value={author} onChange={(e) => setAuthor(e.target.value)} />
+          <input {...author} reset={undefined} />
         </div>
         <div>
           url for more info
-          <input name='info' value={info} onChange={(e)=> setInfo(e.target.value)} />
+          <input {...info} reset={undefined} />
         </div>
         <button>create</button>
+        <button type="button" onClick={reset}>reset</button>
+
       </form>
+
     </div>
   )
 
