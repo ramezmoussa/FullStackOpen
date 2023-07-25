@@ -1,7 +1,11 @@
 
 import { useState } from 'react'
 
-const Books = (props) => {
+const Recommend = (props) => {
+
+  const favoriteGenre = localStorage.getItem('current-user-genre')
+  // Console log content of user:
+  console.log("Recommend user Genre: ", favoriteGenre)
 
   const [genre, setGenre] = useState('all genres')
 
@@ -16,22 +20,18 @@ const Books = (props) => {
 
   const allBooks = props.result.data.allBooks
 
-  let books = []
-  if (genre === 'all genres') {
-    books = allBooks
-  }
-  else {
-    books = genre ? allBooks.filter(book => book.genres.includes(genre)) : allBooks  
-  }
+  let books = favoriteGenre ? allBooks.filter(book => book.genres.includes(favoriteGenre)) : allBooks  
+  
 
   const allGenres = new Set(allBooks.map(book => book.genres).flat())
 
-  console.log(genre)
+  console.log(allGenres)
 
   return (
     <div>
-      <h2>books</h2>
-
+      <h2>recommendations</h2>
+      
+      books in your favourite genre: <b>{favoriteGenre}</b>
       <table>
         <tbody>
           <tr>
@@ -48,13 +48,8 @@ const Books = (props) => {
           ))}
         </tbody>
       </table>
-      <div>
-        {Array.from(allGenres).map(genre => <button key={genre} onClick={() => setGenre(genre)}>{genre}</button>)}
-        <button onClick={() => setGenre('all genres')}>all genres</button>
-      </div>
-
     </div>
   )
 }
 
-export default Books
+export default Recommend

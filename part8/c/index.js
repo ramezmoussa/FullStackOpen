@@ -46,13 +46,20 @@ const typeDefs = `
 
   type User {
     username: String!
+    favoriteGenre: String!
     id: ID!
   }
   
+
+
   type Token {
     value: String!
   }
 
+  type loginObject {
+    user: User!
+    token: Token!
+  }
   type Query {
     me: User
     bookCount: Int!
@@ -65,12 +72,13 @@ const typeDefs = `
   type Mutation {
     createUser(
         username: String!
+        favoriteGenre: String!
       ): User
 
     login(
         username: String!
         password: String!
-      ): Token
+      ): loginObject 
 
     addBook(
       title: String!
@@ -89,6 +97,7 @@ const resolvers = {
     Query: {
 
         me: (root, args, context) => {
+            console.log("user: ", context.currentUser)
             return context.currentUser
 
         },
@@ -122,7 +131,7 @@ const resolvers = {
     Mutation: {
 
         createUser: async (root, args) => {
-            const user = new User({ username: args.username })
+            const user = new User({ username: args.username, favoriteGenre: args.favoriteGenre })
         
             return user.save()
               .catch(error => {
@@ -152,7 +161,10 @@ const resolvers = {
               username: user.username,
               id: user._id,
             }
-            return { value: jwt.sign(userForToken, process.env.JWT_SECRET) }
+            const token = {value: jwt.sign(userForToken, process.env.JWT_SECRET) }
+
+            console.log("login output: ", user, token)
+            return { user, token}
           },
         
         addBook: async (root, args, context) => {
@@ -236,6 +248,7 @@ startStandaloneServer(server, {
           console.log(decodedToken)
           const currentUser = await User
             .findById(decodedToken.id)
+          console.log("current user: ", currentUser)
           return { currentUser }
         }
 
