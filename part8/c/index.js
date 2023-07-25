@@ -4,11 +4,25 @@ const { v1: uuid } = require('uuid')
 const { GraphQLError } = require('graphql')
 const jwt = require('jsonwebtoken')
 
+const { expressMiddleware } = require('@apollo/server/express4')
+const { ApolloServerPluginDrainHttpServer } = require('@apollo/server/plugin/drainHttpServer')
+const { makeExecutableSchema } = require('@graphql-tools/schema')
+const express = require('express')
+const cors = require('cors')
+const http = require('http')
+
 const mongoose = require('mongoose')
 mongoose.set('strictQuery', false)
 const Author = require('./models/author')
 const Book = require('./models/book')
 const User = require('./models/loginuser')
+
+const { WebSocketServer } = require('ws')
+const { useServer } = require('graphql-ws/lib/use/ws')
+
+const { PubSub } = require('graphql-subscriptions')
+const pubsub = new PubSub()
+
 
 require('dotenv').config()
 
@@ -90,6 +104,10 @@ const typeDefs = `
         name: String!
         setBornTo: Int!
       ): Author
+  }
+
+  type Subscription {
+    bookAdded: Book!
   }
 `
 
@@ -207,6 +225,8 @@ const resolvers = {
                 })
               }
 
+            pubsub.publish('BOOK_ADDED', { bookAdded: book })
+
             return book
         },
 
@@ -227,33 +247,69 @@ const resolvers = {
         },
 
 
-    }
+    },
+
+    Subscription: {
+        bookAdded: {
+            subscribe: () => pubsub.asyncIterator(['BOOK_ADDED'])
+        },
+    },
 }
 
-const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-})
 
-startStandaloneServer(server, {
-    listen: { port: 4000 },
-    context: async ({ req, res }) => {
+
+const start = async () => {
+  const app = express()
+  const httpServer = http.createServer(app)
+
+  const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: '/',
+  })
+  
+  const schema = makeExecutableSchema({ typeDefs, resolvers })
+  const serverCleanup = useServer({ schema }, wsServer)
+
+  const server = new ApolloServer({
+    schema,
+    plugins: [
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+      {
+        async serverWillStart() {
+          return {
+            async drainServer() {
+              await serverCleanup.dispose();
+            },
+          };
+        },
+      },
+    ],
+  })
+
+
+  await server.start()
+
+  app.use(
+    '/',
+    cors(),
+    express.json(),
+    expressMiddleware(server, {
+      context: async ({ req }) => {
         const auth = req ? req.headers.authorization : null
-        console.log(auth)
         if (auth && auth.startsWith('Bearer ')) {
-
-          const decodedToken = jwt.verify(
-            auth.substring(7), process.env.JWT_SECRET
-          )
-          console.log(decodedToken)
-          const currentUser = await User
-            .findById(decodedToken.id)
-          console.log("current user: ", currentUser)
+          const decodedToken = jwt.verify(auth.substring(7), process.env.JWT_SECRET)
+          const currentUser = await User.findById(decodedToken.id)
           return { currentUser }
         }
-
       },
-    
-}).then(({ url }) => {
-    console.log(`Server ready at ${url}`)
-})
+    }),
+  )
+
+  const PORT = 4000
+
+  httpServer.listen(PORT, () =>
+    console.log(`Server is now running on http://localhost:${PORT}`)
+  )
+}
+
+start()
