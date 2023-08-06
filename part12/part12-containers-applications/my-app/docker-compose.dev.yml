@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+
+  phonebook-backend-dev:
+    image: phonebook-backend-dev
+    build:
+      context: ./phonebook-backend/
+      dockerfile: dev.Dockerfile
+    ports:
+      - 3001:3001
+    volumes:
+      - ./phonebook-backend:/usr/src/app
+    container_name: phonebook-backend-dev
+
+  phonebook-frontend-dev:
+    image: phonebook-frontend-dev
+    build:
+      context: ./phonebook-frontend/
+      dockerfile: dev.Dockerfile
+    environment:
+      REACT_APP_API_URL: http://phonebook-backend-dev:3001/api
+
+    volumes:
+      - ./phonebook-frontend/:/usr/src/app
+    ports:
+      - 3000:3000
+    container_name: phonebook-frontend-dev

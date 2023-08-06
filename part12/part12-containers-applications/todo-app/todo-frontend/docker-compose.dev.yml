@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  todo-frontend-dev:
+    image: todo-frontend-dev
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    volumes:
+      - ./:/usr/src/app
+    ports:
+      - 3000:3000
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:3001/
+
+    container_name: todo-frontend-dev
+
+  nginx:
+    image: nginx:1.20.1
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - 8080:80
+    container_name: reverse-proxy

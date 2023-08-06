@@ -1,0 +1,13 @@
+script
+docker compose -f docker-compose.dev.yml up
+docker exec -it 5107e04ddc76 /bin/bash
+redis-cli
+KEYS *
+GET "added_todos"
+SET "added_todos" "9001"
+GET "added_todos"
+GET "added_todos"
+DEL "added_todos"
+exit
+exit
+exit
